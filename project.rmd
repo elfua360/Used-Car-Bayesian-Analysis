@@ -3,13 +3,54 @@ title: "R Notebook"
 output: html_notebook
 ---
 ```{r}
-d <- vehicles.florida
+d <- final.vehicles
 ```
 ```{r}
+library(rethinking)
 library(fastDummies)
 ```
 ```{r}
 # Making dummy variables
-d <- dummy_cols(d, select_columns='transmission')
+d <- dummy_cols(d, select_columns=c('manufacturer','condition','cylinders','fuel','title_status','transmission','drive','size','type','paint_color','mileage'))
+```
+```{r}
+# First attempt at applying a multi-variate linear model
+m1 <- map(
+  alist(
+    log_price ~ dnorm(mu, sigma),
+    mu <- a + b1*manufacturer_luxury + b2*manufacturer_normal + b3*mileage_low + b4*mileage_average + b5*mileage_high + b6*mileage_vh
+    + b7*condition_salvage + b8*condition_new + b9*condition_good + b10*condition_fair + b11*condition_excellent + b12*log_years,
+    a ~ dnorm(8, 2),
+    b1 ~dnorm(0,1),
+    b2 ~dnorm(0,1),
+    b3 ~dnorm(0,1),
+    b4 ~dnorm(0,1),
+    b5 ~dnorm(0,1),
+    b6 ~dnorm(0,1),
+    b7 ~dnorm(0,1),
+    b8 ~dnorm(0,1),
+    b9 ~dnorm(0,1),
+    b10 ~dnorm(0,1),
+    b11 ~dnorm(0,1),
+    b12 ~dnorm(2.5,1),
+    sigma ~ dunif(0,10)
+  ), data=d
+)
+```
+```{r}
+# Transform years and price
+log_price = log(d$price)
+log_price <- ifelse(log_price < 0, 0,log_price)
+d$log_price = log_price
+log_years = log(d$years_old)
+log_years <- ifelse(log_years<0, 0,log_years)
+d$log_years = log_years
+
+```
+```{r}
+precis(m1)
+```
+```{r}
+
 ```
 
