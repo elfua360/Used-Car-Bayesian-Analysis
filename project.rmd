@@ -1,0 +1,15 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+d <- vehicles.florida
+```
+```{r}
+library(fastDummies)
+```
+```{r}
+# Making dummy variables
+d <- dummy_cols(d, select_columns='transmission')
+```
+
