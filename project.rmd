@@ -3,7 +3,7 @@ title: "R Notebook"
 output: html_notebook
 ---
 ```{r}
-d <- final.vehicles
+d <- vehicles.florida2
 ```
 ```{r}
 library(rethinking)
@@ -11,18 +11,17 @@ library(fastDummies)
 ```
 ```{r}
 # Making dummy variables
-d <- dummy_cols(d, select_columns=c('manufacturer','condition','cylinders','fuel','title_status','transmission','drive','size','type','paint_color','mileage'))
+d <- dummy_cols(d, select_columns=c('condition','cylinders','fuel','transmission','drive','size','type','paint_color'))
 ```
 ```{r}
-# First attempt at applying a multi-variate linear model
+# Applying a multi-variate linear model
 m1 <- map(
   alist(
     log_price ~ dnorm(mu, sigma),
-    mu <- a + b1*manufacturer_luxury + b2*manufacturer_normal + b3*mileage_low + b4*mileage_average + b5*mileage_high + b6*mileage_vh
-    + b7*condition_salvage + b8*condition_new + b9*condition_good + b10*condition_fair + b11*condition_excellent + b12*log_years,
-    a ~ dnorm(8, 2),
-    b1 ~dnorm(0,1),
-    b2 ~dnorm(0,1),
+    mu <- a + b1*log_years + b2*log_miles + b3*Domestic + b4*condition_excellent + b5*condition_fair + b6*condition_good + b7*condition_ln +   b8*condition_new + b9*condition_salvage,
+    a ~ dnorm(9, 2),
+    b1 ~dnorm(7.6,0.01),
+    b2 ~dnorm(12,2),
     b3 ~dnorm(0,1),
     b4 ~dnorm(0,1),
     b5 ~dnorm(0,1),
@@ -30,9 +29,6 @@ m1 <- map(
     b7 ~dnorm(0,1),
     b8 ~dnorm(0,1),
     b9 ~dnorm(0,1),
-    b10 ~dnorm(0,1),
-    b11 ~dnorm(0,1),
-    b12 ~dnorm(2.5,1),
     sigma ~ dunif(0,10)
   ), data=d
 )
@@ -40,17 +36,56 @@ m1 <- map(
 ```{r}
 # Transform years and price
 log_price = log(d$price)
-log_price <- ifelse(log_price < 0, 0,log_price)
+#log_price <- ifelse(log_price < 0, 0,log_price)
 d$log_price = log_price
-log_years = log(d$years_old)
-log_years <- ifelse(log_years<0, 0,log_years)
+log_years = log(d$year)
+#log_years <- ifelse(log_years<0, 0,log_years)
 d$log_years = log_years
+d$log_miles = log(d$odometer)
 
 ```
 ```{r}
 precis(m1)
 ```
 ```{r}
+#rename condition col to avoid naming issues
+names(d)[names(d) == 'condition_like new'] <- 'condition_ln'
+```
+```{r}
+#testing the model
+#plot(log_price ~ log_years, data = d)
+#log_years.seq <- seq(from=7.6,to=7.61,by=0.00001)
+#mu <- link(m1[""], data=data.frame(log_years=log_years.seq))
+#str(mu)
+post <- extract.samples(m1)
+plot(a ~ b1, post, col=col.alpha(rangi2,0.1), pch=16)
+```
+
+
+```{r}
+plot(b1 ~ b2, post, col=col.alpha(rangi2,0.1), pch=16)
+```
+
+
+
+```
+```{r}
+d$years_old = 2020 - d$year
+d$log_years_old = log(d$years_old)
+d$log_years_old = ifelse(d$log_years_old<0, 0,d$log_years_old)
+```
+```{r}
+#pg 132
+mu <- link(m1)
+mu.mean <- apply(mu, 2, mean)
+mu.PI <- apply(mu, 2, PI)
+price.sim <- sim(m1, n=1e4)
+price.PI <- apply(price.sim, 2, PI)
+```
+```{r}
+plot(mu.mean ~ d$log_price, col=rangi2, ylim=range(mu.PI), xlab='Observed log price', ylab='predicted log price')
+abline( a=0 , b=1 , lty=2 )
+
 
 ```
 
